@@ -53,7 +53,7 @@ def mk_test(x, alpha = 0.05):
     else: # there are some ties in data
         tp = np.zeros(unique_x.shape)
         for i in range(len(unique_x)):
-            tp[i] = sum(unique_x[i] == x)
+            tp[i] = sum(x == unique_x[i])
         var_s = (n*(n-1)*(2*n+5) - np.sum(tp*(tp-1)*(2*tp+5)))/18
     
     if s>0:
