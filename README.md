@@ -1,5 +1,5 @@
 # Mann-Kendall-Trend
-Function to run Mann-Kendall trend test
+Function to run Mann-Kendall trend test, on datasets with at least 10 values.
 
 Simple function derived from coded originally published by Sat Kumar Tomer (satkumartomer@gmail.com)
 Verified against: http://vsp.pnnl.gov/help/Vsample/Design_Trend_Mann_Kendall.htm
