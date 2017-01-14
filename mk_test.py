@@ -88,3 +88,72 @@ def mk_test(x, alpha=0.05):
         trend = 'no trend'
 
     return trend, h, p, z
+
+
+def check_num_samples(beta, delta, std_dev, alpha=0.05, n=4, num_iter=1000,
+                      tol=1e-6, num_cycles=1000, convergence_diff=5):
+    # Initialize the parameters
+    power = 1.0 - beta
+    P_d = 0.0
+    cycle_num = 0
+    max_n = n
+    min_n = n
+    max_n_cycle = 1
+    min_n_cycle = 1
+    # Print information for user
+    print("Delta (gradient): {}".format(delta))
+    print("Standard deviation: {}".format(std_dev))
+    print("Statistical power: {}".format(power))
+
+    # Compute an estimate of probability of detecting a trend if the estimate
+    # Is not close enough to the specified statistical power value or if the
+    # number of iterations exceeds the number of defined cycles.
+    while abs(P_d - power) > tol and cycle_num < num_cycles:
+        cycle_num += 1
+        print("Cycle Number: {}".format(cycle_num))
+        count_of_trend_detections = 0
+
+        # Perform MK test for random sample.
+        for i in xrange(num_iter):
+            r = np.random.normal(loc=0.0, scale=std_dev, size=n)
+            x = r + delta * np.arange(n)
+            trend, h, p, z = mk_test(x, alpha)
+            if h:
+                count_of_trend_detections += 1
+        P_d = float(count_of_trend_detections) / num_iter
+
+        # Determine if P_d is close to the power value or whether we have to
+        # increase or decrease the number of samples.
+        if abs(P_d - power) < tol:
+            print("{} samples are required".format(n))
+            return n
+        elif P_d < power:
+            n += 1
+            print("P_d: {}".format(P_d))
+            print("Increasing n to {}".format(n))
+            print("")
+        else:
+            n -= 1
+            print("P_d: {}".format(P_d))
+            print("Decreasing n to {}".format(n))
+            print("")
+            if n == 0:
+                raise ValueError("Number of samples = 0. This should not happen.")
+
+        # Update max or min n
+        if n > max_n:
+            max_n = n
+            max_n_cycle = cycle_num
+        elif n < min_n:
+            min_n = n
+            min_n_cycle = cycle_num
+
+        # In case the tolerance is too small we'll stop the cycling when the
+        # number of cycles, n, is cycling between the same values.
+        elif (abs(max_n - n) == 1 and
+              cycle_num - max_n_cycle >= convergence_diff or
+              abs(min_n - n) == 1 and
+              cycle_num - min_n_cycle >= convergence_diff):
+            print("Number of samples required has converged.")
+            print("Approximately {} samples are required".format(n))
+            return n
