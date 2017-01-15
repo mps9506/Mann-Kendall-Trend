@@ -91,11 +91,50 @@ def mk_test(x, alpha=0.05):
 
 
 def check_num_samples(beta, delta, std_dev, alpha=0.05, n=4, num_iter=1000,
-                      tol=1e-6, num_cycles=1000, convergence_diff=5):
+                      tol=1e-6, num_cycles=10000, m=5):
+    """
+    This function is an implementation of the "Calculation of Number of Samples
+    Required to Detect a Trend" section written by Sat Kumar Tomer
+    (satkumartomer@gmail.com) which can be found at:
+    http://vsp.pnnl.gov/help/Vsample/Design_Trend_Mann_Kendall.htm
+
+    As stated on the webpage in the URL above the method uses a Monte-Carlo
+    simulation to determine the required number of points in time, n, to take a
+    measurement in order to detect a linear trend for specified small
+    probabilities that the MK test will make decision errors. If a non-linear
+    trend is actually present, then the value of n computed by VSP is only an
+    approximation to the correct n. If non-detects are expected in the
+    resulting data, then the value of n computed by VSP is only an
+    approximation to the correct n, and this approximation will tend to be less
+    accurate as the number of non-detects increases.
+
+    Input:
+        beta: probability of falsely accepting the null hypothesis
+        delta: change per sample period, i.e., the change that occurs between
+               two adjacent sampling times
+        std_dev: standard deviation of the sample points.
+        alpha: significance level (0.05 default)
+        n: initial number of sample points (4 default).
+        num_iter: number of iterations of the Monte-Carlo simulation (1000
+                  default).
+        tol: tolerance level to decide if the predicted probability is close
+             enough to the required statistical power value (1e-6 default).
+        num_cycles: Total number of cycles of the simulation. This is to ensure
+                    that the simulation does finish regardless of convergence
+                    or not (10000 default).
+        m: if the tolerance is too small then the simulation could continue to
+           cycle through the same sample numbers over and over. This parameter
+           determines how many cycles to look back. If the same number of
+           samples was been determined m cycles ago then the simulation will
+           stop.
+
+    """
     # Initialize the parameters
     power = 1.0 - beta
     P_d = 0.0
     cycle_num = 0
+    min_diff_P_d_and_power = abs(P_d - power)
+    best_P_d = P_d
     max_n = n
     min_n = n
     max_n_cycle = 1
@@ -122,12 +161,39 @@ def check_num_samples(beta, delta, std_dev, alpha=0.05, n=4, num_iter=1000,
                 count_of_trend_detections += 1
         P_d = float(count_of_trend_detections) / num_iter
 
-        # Determine if P_d is close to the power value or whether we have to
-        # increase or decrease the number of samples.
+        # Determine if P_d is close to the power value.
         if abs(P_d - power) < tol:
+            print("P_d: {}".format(P_d))
             print("{} samples are required".format(n))
             return n
-        elif P_d < power:
+
+        # Determine if the calculated probability is closest to the statistical
+        # power.
+        if min_diff_P_d_and_power > abs(P_d - power):
+            min_diff_P_d_and_power = abs(P_d - power)
+            best_P_d = P_d
+
+        # Update max or min n.
+        if n > max_n and abs(best_P_d - P_d) < tol:
+            max_n = n
+            max_n_cycle = cycle_num
+        elif n < min_n and abs(best_P_d - P_d) < tol:
+            min_n = n
+            min_n_cycle = cycle_num
+
+        # In case the tolerance is too small we'll stop the cycling when the
+        # number of cycles, n, is cycling between the same values.
+        elif (abs(max_n - n) == 0 and
+              cycle_num - max_n_cycle >= m or
+              abs(min_n - n) == 0 and
+              cycle_num - min_n_cycle >= m):
+            print("Number of samples required has converged.")
+            print("P_d: {}".format(P_d))
+            print("Approximately {} samples are required".format(n))
+            return n
+
+        # Determine whether to increase or decrease the number of samples.
+        if P_d < power:
             n += 1
             print("P_d: {}".format(P_d))
             print("Increasing n to {}".format(n))
@@ -139,21 +205,3 @@ def check_num_samples(beta, delta, std_dev, alpha=0.05, n=4, num_iter=1000,
             print("")
             if n == 0:
                 raise ValueError("Number of samples = 0. This should not happen.")
-
-        # Update max or min n
-        if n > max_n:
-            max_n = n
-            max_n_cycle = cycle_num
-        elif n < min_n:
-            min_n = n
-            min_n_cycle = cycle_num
-
-        # In case the tolerance is too small we'll stop the cycling when the
-        # number of cycles, n, is cycling between the same values.
-        elif (abs(max_n - n) == 1 and
-              cycle_num - max_n_cycle >= convergence_diff or
-              abs(min_n - n) == 1 and
-              cycle_num - min_n_cycle >= convergence_diff):
-            print("Number of samples required has converged.")
-            print("Approximately {} samples are required".format(n))
-            return n
