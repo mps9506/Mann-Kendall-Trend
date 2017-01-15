@@ -128,6 +128,10 @@ def check_num_samples(beta, delta, std_dev, alpha=0.05, n=4, num_iter=1000,
            samples was been determined m cycles ago then the simulation will
            stop.
 
+        Examples
+        --------
+          >>> num_samples = check_num_samples(0.2, 1, 0.1)
+
     """
     # Initialize the parameters
     power = 1.0 - beta
