@@ -72,7 +72,7 @@ def mk_test(x, alpha=0.05):
     if s > 0:
         z = (s - 1)/np.sqrt(var_s)
     elif s == 0:
-            z = 0
+        z = 0
     elif s < 0:
         z = (s + 1)/np.sqrt(var_s)
 
