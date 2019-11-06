@@ -57,16 +57,13 @@ def mk_test(x, alpha=0.05):
             s += np.sign(x[j] - x[k])
 
     # calculate the unique data
-    unique_x = np.unique(x)
+    unique_x, tp = np.unique(x, return_counts=True)
     g = len(unique_x)
 
     # calculate the var(s)
     if n == g:  # there is no tie
         var_s = (n*(n-1)*(2*n+5))/18
     else:  # there are some ties in data
-        tp = np.zeros(unique_x.shape)
-        for i in range(len(unique_x)):
-            tp[i] = sum(x == unique_x[i])
         var_s = (n*(n-1)*(2*n+5) - np.sum(tp*(tp-1)*(2*tp+5)))/18
 
     if s > 0:
